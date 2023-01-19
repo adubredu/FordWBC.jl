@@ -1,0 +1,13 @@
+name = "FordWBC"
+uuid = "7251a141-fe43-4316-ba33-f5fbd32fd10c"
+authors = ["Alphonsus Adu-Bredu"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
