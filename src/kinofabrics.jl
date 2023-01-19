@@ -265,6 +265,21 @@ function mobile_manipulation_task_map(θ, θ̇ , qmotors, observation, prob)
                 prob.task_data[name][:start_time] = prob.t
                 prob.task_data[name][:init_start_time] = true 
             end
+        elseif name == :stand
+            prob.task_data[:mm][:standing] = true
+            prob.task_data[name][:com_height] = current_action[2]
+            prob.task_data[name][:torso_pitch] = current_action[3]
+            prob.task_data[name][:period] = current_action[4]
+            
+            #activate
+            activate_fabric!(name, prob, 2)
+            activate_fabric!(:com_target, prob, 1)
+            activate_fabric!(:upper_body_posture, prob, 1)
+
+            #deactivate
+            delete_fabric!(:navigate, prob, 3)
+            delete_fabric!(:walk, prob, 2)
+            delete_fabric!(:walk_attractor, prob, 1) 
         end
     end
 end
@@ -473,6 +488,26 @@ function walk_task_map(q, qdot, qmotors, observation, problem)
     problem.xᵨ[:walk_attractor] = [vc..., vcdot...] 
 end
 
+function stand_task_map(q, qdot, qmotors, observation, prob)
+    params = prob.task_data[:stand]
+    state = params[:state]
+    if state == :init
+        params[:start_time] = prob.t
+        params[:state] = :run
+    
+    elseif state == :run
+        s = (prob.t - params[:start_time])/params[:period]
+        prob.xᵨ[:com_target][[3,6]] .= params[:com_height]
+        prob.xᵨ[:com_target][7] = params[:torso_pitch]
+        if s >= 1.0
+            params[:state] = :init
+            prob.task_data[:mm][:action_index] += 1
+            delete_fabric!(:stand, prob, 2)
+            println("done standing")
+        end
+    end       
+
+end
 
 
 

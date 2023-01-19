@@ -186,7 +186,7 @@ problem = FabricProblem(ψs, Js, g, M, Ss, xᵨs, Ws, Obstacles, Pr, data,
 zeros(N), zeros(N), 1.0/F, N, digit, 0.0)
 
 
-publisher_address = sim_ip
+publisher_address = robot_ip
 llapi_init(publisher_address)    
 observation = llapi_observation_t()
 command = llapi_command_t()  
