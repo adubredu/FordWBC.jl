@@ -463,7 +463,7 @@ function set_locomotion_mode(;host=:sim)
 end
 
 function set_lowlevel_mode(;host=:sim)
-    hostip = host == :sim ? "ws://localhost:8080" : "ws://10.10.2.1:8080"
+    hostip = host == :sim ? "ws://localhost:8080" : "ws://10.10.1.1:8080"
     WebSockets.open(hostip, subprotocol="json-v1-agility") do ws
         msg = ["request-privilege", Dict("privilege" =>"change-action-command", 
         "priority" => 0)]
@@ -481,7 +481,7 @@ function set_lowlevel_mode(;host=:sim)
     end
 end
 
-function behavior_switcher(problem)
+function behavior_switcher(problem; host=:sim)
     params = problem.task_data[:mm]
     wparams = problem.task_data[:walk]
     fig = Figure(resolution=(800,100))
@@ -498,8 +498,8 @@ function behavior_switcher(problem)
     walkingobs = Observable(false)
 
     announce(x)=printstyled("Activated $x mode\n";color=:blue)
-    on(buttons[1].clicks) do i; llobs[] = true; locobs[]=false; announce("lowlevel"); set_lowlevel_mode(); end
-    on(buttons[2].clicks) do i; locobs[] = true; llobs[]=false; announce("locomotion"); set_locomotion_mode(); end
+    on(buttons[1].clicks) do i; llobs[] = true; locobs[]=false; announce("lowlevel"); set_lowlevel_mode(;host); end
+    on(buttons[2].clicks) do i; locobs[] = true; llobs[]=false; announce("locomotion"); set_locomotion_mode(;host); end
     on(buttons[3].clicks) do i; standingobs[] = true;wparams[:inited]=false;  walkingobs[]=false; announce("standing"); end
     on(buttons[4].clicks) do i; walkingobs[] = true; wparams[:t0]=problem.t; standingobs[]=false; announce("fabric"); end
 

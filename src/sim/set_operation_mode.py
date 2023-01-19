@@ -63,7 +63,7 @@ if __name__ == "__main__":
     system = str(sys.argv[1])
     mode = str(sys.argv[2])
     if (system == "real"):
-        ip = "ws://10.10.2.1:8080"
+        ip = "ws://10.10.1.1:8080"
     else:
         ip = "ws://127.0.0.1:8080"
 
