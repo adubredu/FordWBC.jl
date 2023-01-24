@@ -214,7 +214,7 @@ version = "0.4.0"
 
 [[DigitInterface]]
 deps = ["BenchmarkTools", "CondaPkg", "JSON", "PythonCall", "Revise", "Rotations", "WebSockets"]
-git-tree-sha1 = "dcc810f25fb043c25e95959f68f012cd025d040d"
+git-tree-sha1 = "b7e2c52a92706abce0811bc8a66104805134582a"
 repo-rev = "main"
 repo-url = "https://github.com/adubredu/DigitInterface.jl"
 uuid = "eaae82b0-39d2-4257-bb05-ac4059402812"

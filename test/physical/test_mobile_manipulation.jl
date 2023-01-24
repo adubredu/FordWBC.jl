@@ -11,6 +11,12 @@ const di = DigitInterface
 F = 1e1
 N = 30
 
+# ip = sim_ip
+# host=:sim 
+
+ip = robot_ip
+host=:real
+
 # digit
 digit = DigitBody()
 
@@ -186,7 +192,7 @@ problem = FabricProblem(ψs, Js, g, M, Ss, xᵨs, Ws, Obstacles, Pr, data,
 zeros(N), zeros(N), 1.0/F, N, digit, 0.0)
 
 
-publisher_address = robot_ip
+publisher_address = ip
 llapi_init(publisher_address)    
 observation = llapi_observation_t()
 command = llapi_command_t()  
@@ -199,7 +205,7 @@ problem.θ̇ = qidot
 t_start = observation.time 
 
 mm_params = problem.task_data[:mm]
-behavior_switcher(problem)
+behavior_switcher(problem; host=host)
 
 while true  
     if mm_params[:observables][:standing_mode][]
