@@ -5,7 +5,9 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/ros/melodic/include",
-                "${workspaceFolder}/src/comms/ros/ws/src/subpub/include"
+                "${workspaceFolder}/src/comms/ros/ws/src/subpub/include",
+                "/usr/local/include",
+                "/home/alphonsus/software/cxxwrap/libcxxwrap-julia/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

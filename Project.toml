@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DigitInterface = "eaae82b0-39d2-4257-bb05-ac4059402812"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"

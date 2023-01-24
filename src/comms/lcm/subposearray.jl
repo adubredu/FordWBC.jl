@@ -25,12 +25,16 @@ end
 )
 
 function callback(channel::String, message_data::posearray_t)
-    @show message_data.timestamp
-
+    ts = message_data.timestamp
+    @show ts
 end
 
 subscribe(lc, "tag_poses", callback, posearray_t)
 
 while true 
-    handle(lc)
+    # try        
+        handle(lc)
+    # catch
+    #     printstyled("error\n";color=:red)
+    # end
 end
