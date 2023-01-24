@@ -1,2 +1,4 @@
 /.github
 /.CondaPkg
+/src/comms/ros/ws/build
+/src/comms/ros/ws/devel
