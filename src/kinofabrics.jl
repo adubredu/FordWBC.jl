@@ -203,6 +203,10 @@ function attractor_potential(x, params::Dict)
     return f 
 end
 
+function get_floating_pose(θ, params::Dict)
+    p = θ[[di.qbase_pos_x, di.qbase_pos_y, di.qbase_yaw]]-params[:init_position]
+    return p
+end
 
 ## Task Maps
 
@@ -291,8 +295,9 @@ function navigate_task_map(θ, θ̇ , qmotors, observation, prob)
     # @show state
     u = [0,0,0.]
     if state == :translate        
-        ψ = attractor_task_map
-        p = θ[[di.qbase_pos_x, di.qbase_pos_y, di.qbase_yaw]]
+        ψ = attractor_task_map 
+        p = get_floating_pose(θ, params)
+        @show p
         x = ψ(p, params)
         J = FiniteDiff.finite_difference_jacobian(σ->ψ(σ, params), p)
         f = attractor_potential(x, params)
@@ -400,6 +405,7 @@ function bimanual_pickup_task_map(q, qdot, qmotors, observation, prob)
         delete_fabric!(:bimanual_pickup, prob, 3)
 
     elseif params[:state] == :finish   
+        params[:state] = :descend_init
     end
 
 end
@@ -465,9 +471,11 @@ function bimanual_place_task_map(q, qdot, qmotors, observation, prob)
     elseif params[:state] == :stand 
         params[:state] = :finish
         prob.task_data[:mm][:action_index] += 1
+        prob.xᵨ[:upper_body_posture] = prob.xᵨ[:normal_posture]
         delete_fabric!(:bimanual_place, prob, 3)
 
     elseif params[:state] == :finish  
+        params[:state] = :descend_init
     end
 
 end

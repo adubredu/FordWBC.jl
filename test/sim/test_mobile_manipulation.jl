@@ -24,9 +24,10 @@ xᵨs[:left_swing] = [0.0, 0.3, 0.0, 0.0, 0.0, 0.0]
 xᵨs[:upper_body_posture] = [-0.15, 1.1, 0, -0.145, 0.15, -1.1, 0, 0.145]
 xᵨs[:walk_attractor] = [0.0, -0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 xᵨs[:com_target] = [0.0, -0.15, 0.92, -0.0, 0.15, 0.92, 0.0]
-xᵨs[:open_arms_posture] = [-0.337, 0.463, -0.253, 0, 0.337, -0.463, 0.253, 0]
+xᵨs[:open_arms_posture] = [-0.337, 0.463, 0.1, 0, 0.337, -0.463, -0.1, 0]
 xᵨs[:close_arms_posture] = [0.0, 0.463, 0.253, 0, -0.0, -0.463, -0.253, 0]
 xᵨs[:clutch_arms_posture] = [0.0, 0.463, 0.253, -0.5, 0.0, -0.463, -0.253, 0.5]
+xᵨs[:normal_posture] = [0.0, 0.463, 0.253, 0, -0.0, -0.463, -0.253, 0]
 
 # xᵨs[:upper_body_posture]=xᵨs[:clutch_arms] 
 
@@ -134,7 +135,15 @@ data[:mm] = Dict(
                     :task_maps=>level1_task_maps,
                     # :plan => [(:navigate, [2.0, 0.0, 0.0]), (:bimanual_pickup, [])],
                     # :plan => [(:navigate, [0.5, 0.0, 0.0])], #(:bimanual_pickup, 0.8, 0.2), (:navigate, [1.0, 1.0, 0.0]), (:navigate, [1.0, 2.0, 0.0]), (:bimanual_place, 0.6, 0.4)],
-                    :plan => [(:stand, 0.95, 0.0, 10.0), (:bimanual_pickup, 0.95, 0.0)],
+                    :plan => [(action_symbol=:stand, com_height=0.95, torso_pitch=0.0, period=5.0), 
+                              (action_symbol=:bimanual_pickup, com_height=0.93, torso_pitch=0.4),
+                              (action_symbol=:navigate, waypoint=[0.1, 0.7, 0.0]),
+                              (action_symbol=:bimanual_place, com_height=0.90, torso_pitch=0.4),
+                              (action_symbol=:navigate, waypoint=[0.0, -0.1, 0.0]),
+                              (action_symbol=:bimanual_pickup, com_height=0.6, torso_pitch=0.4),
+                              (action_symbol=:navigate, waypoint=[0.0, -0.65, 0.0]),
+                              (action_symbol=:bimanual_place, com_height=0.90, torso_pitch=0.4),
+                              ],
                     :action_index => 1)
 
 data[:navigate] = Dict(
@@ -145,8 +154,9 @@ data[:navigate] = Dict(
                     :B_turn=>0.2,
                     :stand_start_time=>0.0,
                     :stand_period=>2.0,
-                    :tolerance=>0.2,
-                    :init_start_time=>false)
+                    :tolerance=>0.1,
+                    :init_start_time=>false,
+                    :init_position=>[0.0,0.0,0.0])
 
 data[:bimanual_pickup] = Dict(
                     :state=>:descend_init, 
@@ -199,6 +209,7 @@ problem.θ̇ = qidot
 t_start = observation.time 
 
 mm_params = problem.task_data[:mm]
+problem.task_data[:navigate][:init_position] = zeros(3) #qi[[di.qbase_pos_x, di.qbase_pos_y, di.qbase_yaw]]
 behavior_switcher(problem)
 
 while true  

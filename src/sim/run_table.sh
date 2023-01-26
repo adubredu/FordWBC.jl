@@ -1,2 +1,2 @@
 #!/bin/bash
-./bin/ar-control bin/table_pick.toml 
+./bin/ar-control bin/pile_pick.toml 
