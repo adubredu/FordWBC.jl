@@ -1,21 +1,22 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseArray.h> 
-#include "pose_t.hpp"
-#include "posearray_t.hpp"
+// #include "pose_t.hpp"
+// #include "posearray_t.hpp"
 #include <jlcxx/jlcxx.hpp>
-
+#include "yolo_seg_network/SceneObject.h"
+#include "yolo_seg_network/SceneObjectArray.h"
 
 using namespace std;
 
 class Subpub{
-    private:
-        geometry_msgs::PoseArray poses; 
+    private: 
+        yolo_seg_network::SceneObjectArray poses;
         ros::Subscriber subposearray; 
 
     public:
         Subpub();
-        void pose_array_callback(const geometry_msgs::PoseArray::ConstPtr& posearray);
+        void pose_array_callback(const yolo_seg_network::SceneObjectArray::ConstPtr& inposes);
         std::vector<std::vector<double>> get_poses();
 }; 
 

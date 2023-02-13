@@ -1,17 +1,18 @@
 import rospy 
 from geometry_msgs.msg import PoseArray, Pose
+from subpub.msg import SceneObjectArray, SceneObject
 
-pub = rospy.Publisher("/tag_poses", PoseArray, queue_size=1)
+pub = rospy.Publisher("/state_estimation", SceneObjectArray, queue_size=1)
 rospy.init_node("pub_node")
 r = rospy.Rate(100)
 i=0
 while not rospy.is_shutdown():
-    pose = Pose()
-    posearray = PoseArray()
-    posearray.header.seq = i
+    pose = SceneObject()
+
+    posearray = SceneObjectArray() 
     i += 1
-    posearray.poses.append(pose)
-    posearray.poses.append(pose)
+    posearray.scene_objects.append(pose)
+    posearray.scene_objects.append(pose)
     pub.publish(posearray)
     print(i)
     r.sleep()

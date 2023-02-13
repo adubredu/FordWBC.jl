@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
+  message_generation
 )
 find_package(lcm REQUIRED )
 find_package(JlCxx)
@@ -20,9 +21,16 @@ get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
 get_filename_component(JlCxx_location ${JlCxx_location} DIRECTORY)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${JlCxx_location}")
 
+add_message_files(
+    FILES 
+    SceneObject.msg 
+    SceneObjectArray.msg
+)
+
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
+  std_msgs
   geometry_msgs#   nav_msgs#   sensor_msgs#   std_msgs
 )
 
@@ -32,8 +40,10 @@ catkin_package(
 #  LIBRARIES subpub
 #  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy sensor_msgs std_msgs tf
 #  DEPENDS system_lib
+    CATKIN_DEPENDS message_runtime
 )
  
+
 include_directories(include  ${catkin_INCLUDE_DIRS})
 
 ## Declare a C++ library
