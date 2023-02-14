@@ -14,6 +14,7 @@ include("utils.jl")
 
 include("kinematics/kinematics.jl")
 include("dynamics/dynamics.jl")
+include("comms/sub_poses.jl")
 include("kinofabrics.jl")
 include("lowlevel.jl")
 
@@ -53,5 +54,9 @@ export kin
 @reexport using .dynamics
 const dyn = dynamics
 export dyn
+
+@reexport using .SubPose
+const subpose = SubPose
+export subpose
 
 end

@@ -8,11 +8,11 @@ r = rospy.Rate(100)
 i=0
 while not rospy.is_shutdown():
     pose = SceneObject()
-
+    pose.pose.position.x = i
     posearray = SceneObjectArray() 
-    i += 1
     posearray.scene_objects.append(pose)
     posearray.scene_objects.append(pose)
     pub.publish(posearray)
+    i += 1
     print(i)
     r.sleep()

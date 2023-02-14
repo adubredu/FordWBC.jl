@@ -134,14 +134,16 @@ data[:walk] = Dict(:swing_time=>0.36,
                     :digit=>digit 
                     )
 
-
+object_poses = subpose.get_object_poses(subscriber)
+object = object_poses[1]
+ob_z = object[3]
 data[:mm] = Dict(
                     :observables=>Dict(),
                     :standing=>true,
                     :digit=>digit,
                     :task_maps=>level1_task_maps,
                     :plan => [(action_symbol=:stand, com_height=0.95, torso_pitch=0.0, period=5.0), 
-                              (action_symbol=:bimanual_pickup, com_height=0.95, torso_pitch=0.0),
+                              (action_symbol=:bimanual_pickup, com_height=ob_z, torso_pitch=0.0),
                             #   (action_symbol=:navigate, waypoint=[0.1, 0.7, 0.0]),
                             #   (action_symbol=:bimanual_place, com_height=0.90, torso_pitch=0.4),
                             #   (action_symbol=:navigate, waypoint=[0.0, -0.1, 0.0]),
