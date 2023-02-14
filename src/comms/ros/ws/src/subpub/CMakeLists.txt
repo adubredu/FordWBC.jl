@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 project(subpub) 
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-set(JlCxx_DIR "/home/alphonsus/software/cxxwrap/libcxxwrap-julia-build")
-set(Julia_EXECUTABLE "/home/alphonsus/software/julia/julia-1.6.7-linux-x86_64/julia-1.6.7/bin/julia")
+set(JlCxx_DIR "/home/ford/alphonsus/software/libcxxwrap-julia/libcxxwrap-julia-build")
+set(Julia_EXECUTABLE "/home/ford/alphonsus/software/julia-1.6.5-linux-x86_64/julia-1.6.5/bin/julia")
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
