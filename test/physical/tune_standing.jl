@@ -11,11 +11,11 @@ const di = DigitInterface
 F = 1e1
 N = 30
 
-ip = sim_ip
-host=:sim 
+# ip = sim_ip
+# host=:sim 
 
-# ip = robot_ip
-# host=:real
+ip = robot_ip
+host=:real
 
 # digit
 digit = DigitBody()
@@ -139,8 +139,8 @@ data[:mm] = Dict(
                     :standing=>true,
                     :digit=>digit,
                     :task_maps=>level1_task_maps,
-                    :plan => [(action_symbol=:stand, com_height=0.95, torso_pitch=0.0, period=5.0), 
-                              (action_symbol=:bimanual_pickup, com_height=0.89, torso_pitch=0.0),
+                    :plan => [(action_symbol=:stand, com_height=0.95, torso_pitch=0.0, period=10.0), 
+                              (action_symbol=:bimanual_pickup, com_height=0.92, torso_pitch=0.0),
                             #   (action_symbol=:navigate, waypoint=[0.1, 0.7, 0.0]),
                             #   (action_symbol=:bimanual_place, com_height=0.90, torso_pitch=0.4),
                             #   (action_symbol=:navigate, waypoint=[0.0, -0.1, 0.0]),

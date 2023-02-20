@@ -219,7 +219,7 @@ function compute_standing_command_torques(q, qdot, qdes, qdotdes, qmotors, probl
     kp_hipyaw_stand = 500.0
     kp_hippitch_stand = 500.0
     kp_knee_stand = 800.0
-    kp_toe_stand = 300.0  
+    kp_toe_stand = 400.0  
     kp_knee_comp_stand = 2700
     kd_knee_comp_stand = 300
 
@@ -246,7 +246,7 @@ function compute_standing_command_torques(q, qdot, qdes, qdotdes, qmotors, probl
     τ[di.RightShoulderYaw] = -kp_shoulderyaw_stand * q_motors_error[di.RightShoulderYaw]
     τ[di.RightElbow] = -kp_elbow_stand * q_motors_error[di.RightElbow]
 
-    kd_toe_stand = 1.0
+    kd_toe_stand = 50.0
     τ[di.LeftToeA] = -kp_toe_stand * q_motors_error[di.LeftToeA] + kd_toe_stand * v_com_aligned[1]
     τ[di.LeftToeB] = -kp_toe_stand * q_motors_error[di.LeftToeB] - kd_toe_stand * v_com_aligned[1]
     τ[di.RightToeA] = -kp_toe_stand * q_motors_error[di.RightToeA] - kd_toe_stand * v_com_aligned[1]
