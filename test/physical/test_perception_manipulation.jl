@@ -135,7 +135,7 @@ data[:walk] = Dict(:swing_time=>0.36,
                     )
 
 object_poses = subpose.get_object_poses(subscriber)
-object = object_poses[1]
+object = subpose.get_top_object(object_poses)
 ob_z = object[3]
 data[:mm] = Dict(
                     :observables=>Dict(),

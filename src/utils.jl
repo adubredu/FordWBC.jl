@@ -198,6 +198,28 @@ function compute_prioritized_jacobian(t::Symbol, θ, θ̇ , prob)
     return Jt
 end 
 
+function read_scene_estimate(;path="../test/scene_estimation.json")
+    scene = JSON.parsefile(path)
+    scene_dict = Dict()
+    for obj in scene
+        scene_dict[(obj["id"])] = Dict() 
+        scene_dict[(obj["id"])][:pose] = obj["pose"] 
+        scene_dict[(obj["id"])][:supporting] = obj["supporting"]
+    end
+    return scene_dict
+end
+
+function compute_height_and_pitch(object_pose::Vector{Float64}; 
+                min_height=0.7, max_height=0.95, min_pitch=0.0, max_pitch=0.4,
+                z_min=0.4, z_max=0.9)
+    α=1; β=0.3
+    com_slope = (min_height - max_height)/(z_min - z_max)
+    com_z =  max_height + com_slope * (object_pose[3] - z_max)
+    pitch_slope = (max_pitch - min_pitch)/(z_min - z_max)
+    pitch = min_pitch + pitch_slope * (object_pose[3] - z_max)
+    return com_z, pitch
+end
+
 activate_fabric!(name::Symbol, problem::FabricProblem, level::Int) = if !(name in problem.ψ[Symbol(:level,level)]) push!(problem.ψ[Symbol(:level,level)], name) end
 delete_fabric!(name::Symbol, problem::FabricProblem, level::Int) = deleteat!(problem.ψ[Symbol(:level,level)], findall(x->x==name, problem.ψ[Symbol(:level,level)]))
 

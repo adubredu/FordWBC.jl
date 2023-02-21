@@ -18,6 +18,11 @@ function get_object_poses(s)
     end
     return object_poses
 end
+
+function get_top_object(poses)
+    zs = [p[3] for p in poses]
+    ind = argmax(zs)
+    return poses[ind]
 end
 
 # s = SubPose.Subpub() 
