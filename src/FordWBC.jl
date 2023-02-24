@@ -14,7 +14,7 @@ include("utils.jl")
 
 include("kinematics/kinematics.jl")
 include("dynamics/dynamics.jl")
-include("comms/sub_poses.jl")
+# include("comms/sub_poses.jl")
 include("kinofabrics.jl")
 include("lowlevel.jl")
 
@@ -33,7 +33,10 @@ export jvp,
        wrap_to_pi!,
        wrap_to_pi,
        wrap_angle,
-       behavior_switcher
+       behavior_switcher,
+       read_scene_estimate,
+       get_top_object_pose
+       compute_height_and_pitch
 
 export DigitBody,
         Indices
@@ -55,8 +58,8 @@ export kin
 const dyn = dynamics
 export dyn
 
-@reexport using .SubPose
-const subpose = SubPose
-export subpose
+# @reexport using .SubPose
+# const subpose = SubPose
+# export subpose
 
 end

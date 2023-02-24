@@ -6,8 +6,7 @@ using WebSockets, FiniteDiff
 using JSON, Rotations, GLMakie
 
 const fwbc = FordWBC
-const di = DigitInterface 
-subscriber = subpose.Subpub()
+const di = DigitInterface  
 
 F = 1e1
 N = 30
@@ -17,6 +16,15 @@ N = 30
 
 ip = robot_ip
 host=:real
+
+publisher_address = ip
+llapi_init(publisher_address)    
+observation = llapi_observation_t()
+command = llapi_command_t()  
+observation = llapi_observation_t() 
+connect_to_robot(observation, command) 
+
+qi, qidot, qimotors = get_generalized_coordinates(observation) 
 
 # digit
 digit = DigitBody()
@@ -34,7 +42,7 @@ xᵨs[:com_target] = [0.0, -0.15, 0.92, -0.0, 0.15, 0.92, 0.0]
 xᵨs[:open_arms_posture] = [-0.337, 0.463, -0.253, 0, 0.337, -0.463, 0.253, 0]
 xᵨs[:close_arms_posture] = [0.0, 0.463, 0.253, 0, -0.0, -0.463, -0.253, 0]
 xᵨs[:clutch_arms_posture] = [0.0, 0.463, 0.253, -0.5, 0.0, -0.463, -0.253, 0.5]
-xᵨs[:normal_posture] = [0.0, 0.463, 0.253, 0, -0.0, -0.463, -0.253, 0]
+xᵨs[:normal_posture] = [-0.15, 1.1, 0, -0.145, 0.15, -1.1, 0, 0.145]
 
 # xᵨs[:upper_body_posture]=xᵨs[:clutch_arms] 
 
@@ -134,16 +142,17 @@ data[:walk] = Dict(:swing_time=>0.36,
                     :digit=>digit 
                     )
 
-object_poses = subpose.get_object_poses(subscriber)
-object = subpose.get_top_object(object_poses)
-ob_z = object[3]
+scene_estimate = read_scene_estimate(q)
+top_object_pose = get_top_object_pose(scene_estimate) 
+com_z, pitch = compute_height_and_pitch(top_object_pose)
+
 data[:mm] = Dict(
                     :observables=>Dict(),
                     :standing=>true,
                     :digit=>digit,
                     :task_maps=>level1_task_maps,
                     :plan => [(action_symbol=:stand, com_height=0.95, torso_pitch=0.0, period=5.0), 
-                              (action_symbol=:bimanual_pickup, com_height=ob_z, torso_pitch=0.0),
+                              (action_symbol=:bimanual_pickup, com_height=com_z, torso_pitch=pitch),
                             #   (action_symbol=:navigate, waypoint=[0.1, 0.7, 0.0]),
                             #   (action_symbol=:bimanual_place, com_height=0.90, torso_pitch=0.4),
                             #   (action_symbol=:navigate, waypoint=[0.0, -0.1, 0.0]),
@@ -202,15 +211,6 @@ Obstacles = nothing
 problem = FabricProblem(ψs, Js, g, M, Ss, xᵨs, Ws, Obstacles, Pr, data,
 zeros(N), zeros(N), 1.0/F, N, digit, 0.0)
 
-
-publisher_address = ip
-llapi_init(publisher_address)    
-observation = llapi_observation_t()
-command = llapi_command_t()  
-observation = llapi_observation_t() 
-connect_to_robot(observation, command) 
-
-qi, qidot, qimotors = get_generalized_coordinates(observation) 
 problem.θ = qi
 problem.θ̇ = qidot   
 t_start = observation.time 

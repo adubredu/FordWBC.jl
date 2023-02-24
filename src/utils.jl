@@ -198,25 +198,44 @@ function compute_prioritized_jacobian(t::Symbol, θ, θ̇ , prob)
     return Jt
 end 
 
-function read_scene_estimate(;path="../test/scene_estimation.json")
+function read_scene_estimate(q; path="/home/ford-digit/ford-digit-project/catkin_ws/state_estimation.json", z_tag_offset=0.15)
     scene = JSON.parsefile(path)
     scene_dict = Dict()
+    com_z = kin.p_com_wrt_feet(q)[3]
+    offset = com_z + z_tag_offset
     for obj in scene
         scene_dict[(obj["id"])] = Dict() 
-        scene_dict[(obj["id"])][:pose] = obj["pose"] 
+        pose = obj["center"]
+        pose[3] += offset 
+        scene_dict[(obj["id"])][:pose] = pose
         scene_dict[(obj["id"])][:supporting] = obj["supporting"]
+        scene_dict[(obj["id"])][:supported] = obj["supported"]
+        scene_dict[(obj["id"])][:size] = obj["size"]
+        scene_dict[(obj["id"])][:id] = obj["id"]
     end
     return scene_dict
 end
 
-function compute_height_and_pitch(object_pose::Vector{Float64}; 
-                min_height=0.7, max_height=0.95, min_pitch=0.0, max_pitch=0.4,
-                z_min=0.4, z_max=0.9)
+function get_top_object_pose(scene_dict)
+    poses = [scene_dict[k][:pose] for k in keys(scene_dict)]
+    zs = [p[3] for p in poses]
+    ind = argmax(zs)
+    return poses[ind]
+end
+
+function compute_height_and_pitch(object_pose::Vector{Any}; 
+                min_com_height=0.7, max_com_height=0.95, min_pitch=0.0, max_pitch=0.35,
+                z_min=0.4, z_max=1.0)
     α=1; β=0.3
-    com_slope = (min_height - max_height)/(z_min - z_max)
-    com_z =  max_height + com_slope * (object_pose[3] - z_max)
-    pitch_slope = (max_pitch - min_pitch)/(z_min - z_max)
-    pitch = min_pitch + pitch_slope * (object_pose[3] - z_max)
+    obj_height_span = z_max - z_min
+    com_height_span = max_com_height - min_com_height
+    com_z_scaled = (object_pose[3] - z_min)/obj_height_span
+    com_z = min_com_height + (com_z_scaled * com_height_span)
+
+    pitch_span = max_pitch - min_pitch
+    pitch_scaled = (object_pose[3] - z_min)/obj_height_span
+    pitch = min_pitch + (pitch_scaled * pitch_span)
+
     return com_z, pitch
 end
 
