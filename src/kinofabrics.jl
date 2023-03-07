@@ -24,6 +24,13 @@ function made_impact(params)
     return false
 end
 
+function transition_to_stand(params)
+    if params[:s] > 0.9 #&& params[:swing_foot] == :right
+        return true
+    end
+    return false
+end
+
 function check_stance_switch(params)
     if made_impact(params)
         params[:swing_foot] = params[:swing_foot] == :left ? :right : :left 
@@ -100,18 +107,22 @@ function compute_alip_foot_placement(params)
     com_wrt_feet = kin.p_com_wrt_feet(params[:q])
     id = params[:swing_foot] == :left ? 6 : 3
     zH = com_wrt_feet[id]
+    params[:walk_height] = zH
     lip_constant = sqrt(9.806/zH)
     Ts = params[:swing_time]
     T_r = (1-params[:s])*Ts
     id = params[:swing_foot] == :left ? 4 : 1
     vel_des_st = params[:vel_des_target]
     mass = 46.2104
-    step_width = params[:step_width]
+    step_width = params[:step_width] 
 
     p_com_w = kin.p_COM(params[:q])
+    v_com_w = kin.v_COM(params[:q], params[:qdot])
     if params[:swing_foot] == :right
         p_left_toe_w = kin.p_toe_pitch_joint_left(params[:q])
         p_com_wrt_st_aligned = params[:Rz_st]' * (p_com_w - p_left_toe_w)
+        v_com_wrt_st_aligned = params[:Rz_st]' * v_com_w  
+
         L = kin.angular_momentum_about_point(params[:q], params[:qdot], p_left_toe_w)
         L_aligned = params[:Rz_st]' * L 
         Lx_st = L_aligned[1]
@@ -119,6 +130,8 @@ function compute_alip_foot_placement(params)
     else
         p_right_toe_w = kin.p_toe_pitch_joint_right(params[:q])
         p_com_wrt_st_aligned = params[:Rz_st]' * (p_com_w - p_right_toe_w)
+        v_com_wrt_st_aligned = params[:Rz_st]' * v_com_w  
+
         L = kin.angular_momentum_about_point(params[:q], params[:qdot], p_right_toe_w)
         L_aligned = params[:Rz_st]' * L
         Lx_st = L_aligned[1]
@@ -126,6 +139,9 @@ function compute_alip_foot_placement(params)
     end
     xc = p_com_wrt_st_aligned[1] 
     yc = p_com_wrt_st_aligned[2]
+    vz = v_com_wrt_st_aligned[3]
+
+    # @show vz
 
 
     if params[:swing_foot] == :right  
@@ -143,8 +159,34 @@ function compute_alip_foot_placement(params)
     Lx_eos_est = -1*mass*zH*lip_constant*sinh(lip_constant*T_r)*yc + cosh(lip_constant*T_r) * Lx_st
     Ly_eos_est = mass*zH*lip_constant*sinh(lip_constant*T_r)*xc + cosh(lip_constant*T_r)*Ly_st 
 
-    p_com_wrt_sw_eos_x = (Ly_des - cosh(lip_constant*Ts)*Ly_eos_est) / (mass*zH*lip_constant*sinh(lip_constant*Ts))
-    p_com_wrt_sw_eos_y = -(Lx_des - cosh(lip_constant*Ts)*Lx_eos_est) / (mass*zH*lip_constant*sinh(lip_constant*Ts))
+    # p_com_wrt_sw_eos_x = (Ly_des - cosh(lip_constant*Ts)*Ly_eos_est) / (mass*zH*lip_constant*sinh(lip_constant*Ts))
+    # p_com_wrt_sw_eos_y = -(Lx_des - cosh(lip_constant*Ts)*Lx_eos_est) / (mass*zH*lip_constant*sinh(lip_constant*Ts))
+
+    # p_com_wrt_sw_eos_x = (Ly_des - cosh(lip_constant*Ts)*(Ly_eos_est + mass*vz*xc))/(mass*(zH*lip_constant*sinh(lip_constant*Ts)-vz)*cosh(lip_constant*Ts))
+    # p_com_wrt_sw_eos_y = -(Lx_des - cosh(lip_constant*Ts)*(Lx_eos_est - mass*vz*yc))/(mass*(zH*lip_constant*sinh(lip_constant*Ts)-vz)*cosh(lip_constant*Ts))
+
+
+    p_com_wrt_sw_eos_x = (Ly_des - cosh(lip_constant*Ts)*Ly_eos_est - mass*cosh(lip_constant*Ts) * xc*vz)  /  (mass*zH*lip_constant*sinh(lip_constant*Ts) - mass * cosh(lip_constant*Ts) * vz)
+    p_com_wrt_sw_eos_y = (Lx_des - cosh(lip_constant*Ts)*Lx_eos_est + mass*cosh(lip_constant*Ts) * yc*vz)  /  (mass*-zH*lip_constant*sinh(lip_constant*Ts) + mass * cosh(lip_constant*Ts) * vz)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     p_sw_wrt_st_eos_x = xc_eos_est - p_com_wrt_sw_eos_x
     p_sw_wrt_st_eos_y = yc_eos_est - p_com_wrt_sw_eos_y
@@ -208,6 +250,32 @@ function get_floating_pose(θ, params::Dict)
     return p
 end
 
+function filter_coordinates(vs, prob, val=:vel)
+    param = prob.task_data[:filter]
+    a = param[:filter_parameter]
+    if val == :vel
+        if param[:first_iter_vel]
+            qdot_filtered = vs
+            param[:qdot_filtered] = vs
+            param[:first_iter_vel] = false
+        else
+            qdot_filtered = (1-a)*param[:qdot_filtered] + a*vs
+            param[:qdot_filtered] = qdot_filtered
+        end
+        return qdot_filtered
+    else
+        if param[:first_iter_pos]
+            q_filtered = vs
+            param[:q_filtered] = vs
+            param[:first_iter_pos] = false
+        else
+            q_filtered = (1-a)*param[:q_filtered] + a*vs
+            param[:q_filtered] = q_filtered
+        end
+        return q_filtered
+    end
+
+end
 ## Task Maps
 
 # Level 4
@@ -216,9 +284,46 @@ function mobile_manipulation_task_map(θ, θ̇ , qmotors, observation, prob)
     if !(params[:action_index] > length(params[:plan]))
         current_action = params[:plan][params[:action_index]]
         name = current_action[1]
-        @show "current action: $name"
+        println("")
+        @show name, params[:action_index]
         if name == :navigate 
             prob.task_data[name][:goal] = current_action[2] 
+            prob.task_data[:mm][:standing] = false
+            # activate
+            activate_fabric!(name, prob, 3)
+            activate_fabric!(:walk, prob, 2)
+            activate_fabric!(:walk_attractor, prob, 1)
+            activate_fabric!(:upper_body_posture, prob, 1)
+
+            # deactivate
+            delete_fabric!(:bimanual_pickup, prob, 3) 
+            delete_fabric!(:com_target, prob, 1)
+            if !prob.task_data[name][:init_start_time]
+                # prob.task_data[name][:start_time] = prob.t
+                params[:init_start_time] = true 
+            end
+
+        elseif name == :walk_in_place  
+            prob.task_data[:mm][:standing] = false
+            prob.task_data[name][:period] = current_action[2]
+            # activate
+            activate_fabric!(name, prob, 3)
+            activate_fabric!(:walk, prob, 2)
+            activate_fabric!(:walk_attractor, prob, 1)
+            activate_fabric!(:upper_body_posture, prob, 1)
+
+            # deactivate
+            delete_fabric!(:bimanual_pickup, prob, 3) 
+            delete_fabric!(:com_target, prob, 1) 
+            if !prob.task_data[name][:init_start_time]
+                println("initing")
+                prob.task_data[name][:start_time] = prob.t
+                prob.task_data[name][:init_start_time] = true 
+            end
+
+        elseif name == :precise_move
+            prob.task_data[name][:direction] = current_action[2]
+            prob.task_data[name][:distance] = current_action[3]
             prob.task_data[:mm][:standing] = false
             # activate
             activate_fabric!(name, prob, 3)
@@ -245,6 +350,8 @@ function mobile_manipulation_task_map(θ, θ̇ , qmotors, observation, prob)
 
             # deactivate
             delete_fabric!(:navigate, prob, 3)
+            delete_fabric!(:precise_move, prob, 3)
+            delete_fabric!(:walk_in_place, prob, 3)
             delete_fabric!(:walk, prob, 2)
             delete_fabric!(:walk_attractor, prob, 1)  
             if !prob.task_data[name][:init_start_time]
@@ -263,6 +370,8 @@ function mobile_manipulation_task_map(θ, θ̇ , qmotors, observation, prob)
 
             # deactivate
             delete_fabric!(:navigate, prob, 3)
+            delete_fabric!(:precise_move, prob, 3)
+            delete_fabric!(:walk_in_place, prob, 3)
             delete_fabric!(:walk, prob, 2)
             delete_fabric!(:walk_attractor, prob, 1) 
             if !prob.task_data[name][:init_start_time]
@@ -274,6 +383,7 @@ function mobile_manipulation_task_map(θ, θ̇ , qmotors, observation, prob)
             prob.task_data[name][:com_height] = current_action[2]
             prob.task_data[name][:torso_pitch] = current_action[3]
             prob.task_data[name][:period] = current_action[4]
+            prob.task_data[name][:torso_roll] = current_action[5]
             
             #activate
             activate_fabric!(name, prob, 2)
@@ -282,7 +392,23 @@ function mobile_manipulation_task_map(θ, θ̇ , qmotors, observation, prob)
 
             #deactivate
             delete_fabric!(:navigate, prob, 3)
+            delete_fabric!(:precise_move, prob, 3)
+            delete_fabric!(:walk_in_place, prob, 3)
             delete_fabric!(:walk, prob, 2)
+            delete_fabric!(:walk_attractor, prob, 1) 
+        
+        elseif name == :cornhole
+            prob.task_data[:mm][:standing] = true
+            #activate
+            activate_fabric!(name, prob, 2)
+            activate_fabric!(:com_target, prob, 1)
+            activate_fabric!(:upper_body_posture, prob, 1)
+
+            #deactivate
+            delete_fabric!(:navigate, prob, 3)
+            delete_fabric!(:walk, prob, 2)
+            delete_fabric!(:precise_move, prob, 3)
+            delete_fabric!(:walk_in_place, prob, 3)
             delete_fabric!(:walk_attractor, prob, 1) 
         end
     end
@@ -297,42 +423,34 @@ function navigate_task_map(θ, θ̇ , qmotors, observation, prob)
     if state == :translate        
         ψ = attractor_task_map 
         p = get_floating_pose(θ, params)
-        @show p
+        # @show p
         x = ψ(p, params)
         J = FiniteDiff.finite_difference_jacobian(σ->ψ(σ, params), p)
         f = attractor_potential(x, params)
-        u = J'*f 
-        # u = clamp.(u, -[0.1,0.1,0.1], [0.1,0.1,0.1])
+        u = J'*f  
         delta = norm(p-params[:goal])
-        @show delta
-        # if delta < params[:tolerance]*2
-        #     prob.task_data[:walk][:step_width] = 0.4
-        # end
+        # @show delta 
         if delta < params[:tolerance]
             params[:state] = :stand
             params[:stand_start_time] = prob.t
         end
     elseif state == :stand 
-        if length(prob.task_data[:mm][:plan]) == 1 switch = true else
+        if prob.task_data[:mm][:action_index] >= length(prob.task_data[:mm][:plan])  switch = true else
             switch = prob.task_data[:mm][:plan][prob.task_data[:mm][:action_index]+1][1] != :navigate 
         end
         if  switch
             s = (prob.t - params[:stand_start_time])/params[:stand_period]
-            prob.task_data[:walk][:vel_des_target] = [0,0,0.]
-            @show prob.task_data[:walk][:s]
-            if s >= 1.0  
+            prob.task_data[:walk][:vel_des_target] = [0,0,0.] 
+            if s >= 1.0  && transition_to_stand(prob.task_data[:walk])  
+                prob.xᵨ[:com_target][[3,6]] .= prob.task_data[:walk][:walk_height]
                 activate_fabric!(:com_target, prob, 1)
                 delete_fabric!(:walk_attractor, prob, 1)
-                prob.task_data[:mm][:standing] = true 
-                if made_impact(prob.task_data[:walk])
-                    params[:state] = :translate
-                    # prob.task_data[:walk][:step_width] = 0.3
-                    prob.task_data[:mm][:action_index] += 1  
-                    prob.task_data[:bimanual_pickup][:action_start_time] = prob.t
-                end
-            end
-        else
-            # @show "translating"
+                prob.task_data[:mm][:standing] = true
+                params[:state] = :translate 
+                prob.task_data[:mm][:action_index] += 1  
+                prob.task_data[:bimanual_pickup][:action_start_time] = prob.t
+            end 
+        else 
             params[:state] = :translate 
             prob.task_data[:mm][:action_index] += 1
         end
@@ -340,14 +458,105 @@ function navigate_task_map(θ, θ̇ , qmotors, observation, prob)
     prob.task_data[:walk][:vel_des_target] = u
 end
 
+function walk_in_place_task_map(θ, θ̇ , qmotors, observation, prob)
+    params = prob.task_data[:walk_in_place]
+    state = params[:state]
+    u = [0., 0, 0]
+    # @show state
+    
+    # if state == :init 
+    #     params[:state] = :walk
+
+    if state == :walk
+        s = (prob.t - params[:start_time])/params[:period]
+        # @show s
+        if s >= 1.0
+            params[:state] = :finish
+        end
+
+    elseif state == :finish
+        prob.task_data[:mm][:action_index] += 1 
+        # params[:state] = :walk
+    end
+    prob.task_data[:walk][:vel_des_target] = u
+end
+
+
+function precise_move_task_map(θ, θ̇ , qmotors, observation, prob)
+    params = prob.task_data[:precise_move]
+    state = params[:state]
+    @show state
+    u = [-0.1, 0, 0]
+    if state == :init
+        params[:init_position] = θ[[di.qbase_pos_x, di.qbase_pos_y]]
+        params[:state] = :walk_in_place
+        params[:w_start_time] = prob.t
+
+    elseif state == :walk_in_place
+        period = params[:direction] == :forward ? params[:wx_period] : params[:wy_period]
+        s = (prob.t - params[:w_start_time])/period
+        prob.task_data[:walk][:vel_des_target] = [0,0,0.] 
+        if s >= 1.0
+            params[:state] = :move
+        end
+    
+    elseif state == :move
+        current_pose = θ[[di.qbase_pos_x, di.qbase_pos_y]]
+        d = norm(current_pose-params[:init_position])
+        sign = params[:distance] < 0 ? -1 : 1
+        e = sign*(d - abs(params[:distance]))
+        # @show e
+        dedt = e/params[:dt]
+        v = -params[:Kp]*e - params[:Kd]*dedt
+        lim = params[:direction] == :forward ? params[:limx] : params[:limy]
+        v = clamp(v, -lim, lim)
+        if params[:direction] == :forward u[1] = v else u[2] = v  end
+        if abs(e) < params[:tolerance] 
+            params[:state] = :purgatory
+            params[:stand_start_time] = prob.t
+        end
+
+    elseif state == :purgatory
+        s = (prob.t - params[:stand_start_time])/params[:stand_period]
+        prob.task_data[:walk][:vel_des_target] = [0,0,0.] 
+        if s >= 1.0
+            params[:state] = :stand
+        end
+
+
+    elseif state == :stand 
+        if prob.task_data[:mm][:action_index] >= length(prob.task_data[:mm][:plan])  switch = true else
+            switch = !(prob.task_data[:mm][:plan][prob.task_data[:mm][:action_index]+1][1] in (:precise_move, :navigate))
+        end
+        if  switch
+            s = (prob.t - params[:stand_start_time])/params[:stand_period]
+            prob.task_data[:walk][:vel_des_target] = [0,0,0.] 
+            if s >= 1.0  && transition_to_stand(prob.task_data[:walk])  
+                # prob.xᵨ[:com_target][[3,6]] .= prob.task_data[:walk][:walk_height]
+                activate_fabric!(:com_target, prob, 1)
+                delete_fabric!(:walk_attractor, prob, 1)
+                prob.task_data[:mm][:standing] = true
+                params[:state] = :init 
+                prob.task_data[:mm][:action_index] += 1  
+                prob.task_data[:bimanual_pickup][:action_start_time] = prob.t
+            end 
+        else 
+            params[:state] = :init 
+            prob.task_data[:mm][:action_index] += 1
+        end
+    end
+    # @show u
+    prob.task_data[:walk][:vel_des_target] = u     
+end
+
 function bimanual_pickup_task_map(q, qdot, qmotors, observation, prob)  
     params = prob.task_data[:bimanual_pickup]
-    println("state: $(params[:state])")
+    # println("state: $(params[:state])")
 
     if params[:state] == :descend_init
         t0 = prob.t
         T = params[:flight_time]
-        p0 = 0.0; z0 = 0.95
+        p0 = 0.0; z0 = 0.95#kin.p_com_wrt_feet(q)[3]
         pf = params[:final_pitch]; zf = params[:final_com]        
         pitch(t) = (1 - ((t-t0)/T))*p0 + ((t-t0)/T)*pf
         com_height(t) = (1 - ((t-t0)/T))*z0 + ((t-t0)/T)*zf
@@ -362,7 +571,7 @@ function bimanual_pickup_task_map(q, qdot, qmotors, observation, prob)
     elseif params[:state] == :descend
         pitch_traj = params[:pitch_trajectory]
         height_traj = params[:com_height_trajectory] 
-        prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
+        # prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
         prob.xᵨ[:com_target][7] = pitch_traj(prob.t) 
         prob.xᵨ[:upper_body_posture] = prob.xᵨ[:open_arms_posture]  
         if abs(params[:flight_time] - (prob.t - params[:start_time])) < 1e-2
@@ -392,7 +601,7 @@ function bimanual_pickup_task_map(q, qdot, qmotors, observation, prob)
     elseif params[:state] == :ascend
         pitch_traj = params[:pitch_trajectory]
         height_traj = params[:com_height_trajectory] 
-        prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
+        # prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
         prob.xᵨ[:com_target][7] = pitch_traj(prob.t) 
         prob.xᵨ[:upper_body_posture] = prob.xᵨ[:clutch_arms_posture] 
         if abs(params[:flight_time] - (prob.t - params[:start_time])) < 1e-2
@@ -412,12 +621,12 @@ end
 
 function bimanual_place_task_map(q, qdot, qmotors, observation, prob) 
     params = prob.task_data[:bimanual_place]
-    println("state: $(params[:state])")
+    # println("state: $(params[:state])")
 
     if params[:state] == :descend_init
         t0 = prob.t 
         T = params[:flight_time]
-        p0 = 0.0; z0 = 0.95
+        p0 = 0.0; z0 = 0.92#kin.p_com_wrt_feet(q)[3]
         pf = params[:final_pitch]; zf = params[:final_com]        
         pitch(t) = (1 - ((t-t0)/T))*p0 + ((t-t0)/T)*pf
         com_height(t) = (1 - ((t-t0)/T))*z0 + ((t-t0)/T)*zf
@@ -433,7 +642,7 @@ function bimanual_place_task_map(q, qdot, qmotors, observation, prob)
     elseif params[:state] == :descend
         pitch_traj = params[:pitch_trajectory]
         height_traj = params[:com_height_trajectory] 
-        prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
+        # prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
         prob.xᵨ[:com_target][7] = pitch_traj(prob.t)   
         if abs(params[:flight_time] - (prob.t - params[:start_time])) < 1e-2
             params[:state] = :open
@@ -462,7 +671,7 @@ function bimanual_place_task_map(q, qdot, qmotors, observation, prob)
     elseif params[:state] == :ascend
         pitch_traj = params[:pitch_trajectory]
         height_traj = params[:com_height_trajectory] 
-        prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
+        # prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
         prob.xᵨ[:com_target][7] = pitch_traj(prob.t) 
         if abs(params[:flight_time] - (prob.t - params[:start_time])) < 1e-2
             params[:state] = :stand
@@ -502,11 +711,15 @@ function stand_task_map(q, qdot, qmotors, observation, prob)
     if state == :init
         params[:start_time] = prob.t
         params[:state] = :run
+        p0 = q[di.qbase_pitch]; r0 = q[di.qbase_roll]
+        params[:pitch_trajectory] = s->(1-s)*p0 + s*params[:torso_pitch]
+        params[:roll_trajectory] = s->(1-s)*p0 + s*params[:torso_roll]
     
     elseif state == :run
         s = (prob.t - params[:start_time])/params[:period]
         prob.xᵨ[:com_target][[3,6]] .= params[:com_height]
-        prob.xᵨ[:com_target][7] = params[:torso_pitch]
+        prob.xᵨ[:com_target][7] = params[:pitch_trajectory](s)
+        prob.xᵨ[:com_target][8] = params[:roll_trajectory](s)
         if s >= 1.0
             params[:state] = :init
             prob.task_data[:mm][:action_index] += 1
@@ -517,6 +730,102 @@ function stand_task_map(q, qdot, qmotors, observation, prob)
 
 end
 
+function cornhole_task_map(q, qdot, qmotors, observation, prob)
+    params = prob.task_data[:cornhole]
+    state = params[:state]
+    @show state
+
+    if state == :init
+        open_gripper!(params[:gripper])
+        println("open gripper")
+        params[:start_time] = prob.t
+        params[:state] = :descend_init
+    
+    elseif params[:state] == :descend_init
+        t0 = prob.t
+        T = params[:descend_period]
+        p0 = 0.0; z0 = 0.95
+        pf = params[:pick_torso_pitch]; zf = params[:pick_height]    
+        params[:pitch_trajectory] = t -> (1 - ((t-t0)/T))*p0 + ((t-t0)/T)*pf
+        params[:com_height_trajectory] = t -> (1 - ((t-t0)/T))*z0 + ((t-t0)/T)*zf  
+        params[:state] = :descend
+        params[:start_time] = prob.t 
+    
+    elseif params[:state] == :descend
+        pitch_traj = params[:pitch_trajectory]
+        height_traj = params[:com_height_trajectory] 
+        prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
+        prob.xᵨ[:com_target][7] = pitch_traj(prob.t)  
+        if abs(params[:descend_period] - (prob.t - params[:start_time])) < 1e-2
+            params[:state] = :pick
+            params[:start_time] = prob.t
+        end
+    
+    elseif state == :pick
+        s = (prob.t - params[:start_time])/params[:pick_period]
+        prob.xᵨ[:upper_body_posture] = prob.xᵨ[:pick_posture]
+        if s >= 1.0
+            params[:state] = :clasp
+            params[:start_time] = prob.t
+        end
+    
+    elseif state == :clasp
+        s = (prob.t - params[:start_time])/params[:clasp_period]
+        close_gripper!(params[:gripper])
+        println("close gripper")
+        if s >= 1.0
+            params[:state] = :ascend_init
+            params[:start_time] = prob.t
+        end
+
+    elseif params[:state] == :ascend_init
+        t0 = prob.t
+        T = params[:ascend_period]
+        p0 = 0.0; z0 = params[:pick_height]
+        pf = params[:throw_torso_pitch]; zf = params[:throw_height]    
+        params[:pitch_trajectory] = t -> (1 - ((t-t0)/T))*p0 + ((t-t0)/T)*pf
+        params[:com_height_trajectory] = t -> (1 - ((t-t0)/T))*z0 + ((t-t0)/T)*zf 
+        params[:state] = :ascend
+        params[:start_time] = prob.t 
+    
+    elseif params[:state] == :ascend
+        pitch_traj = params[:pitch_trajectory]
+        height_traj = params[:com_height_trajectory] 
+        prob.xᵨ[:com_target][[3, 6]] .= height_traj(prob.t)
+        prob.xᵨ[:com_target][7] = pitch_traj(prob.t)  
+        if abs(params[:ascend_period] - (prob.t - params[:start_time])) < 1e-2
+            params[:state] = :load
+            params[:start_time] = prob.t
+        end
+
+    elseif state == :load
+        s = (prob.t - params[:start_time])/params[:load_period]
+        prob.xᵨ[:upper_body_posture] = prob.xᵨ[:load_posture]
+        if s >= 1.0
+            params[:state] = :throw
+            params[:start_time] = prob.t
+        end
+    
+    elseif state == :throw 
+        s = (prob.t - params[:start_time])/params[:throw_period]
+        prob.xᵨ[:upper_body_posture] = prob.xᵨ[:throw_posture]
+        params[:fling] = true
+        if 0.2<s<0.4 
+            open_gripper!(params[:gripper])
+            println("open gripper")
+        end
+
+        if s >= 1.0
+            params[:state] = :finish
+            params[:fling] = false
+            params[:start_time] = prob.t
+        end
+
+    elseif state == :finish 
+        prob.xᵨ[:upper_body_posture] = prob.xᵨ[:normal_posture]
+    end
+
+end
 
 
 # Level 1
@@ -550,6 +859,7 @@ function com_target_task_map(θ, θ̇ , prob::FabricProblem)
     θ[di.qleftShinToTarsus] = -θ[di.qleftKnee]
     θ[di.qrightShinToTarsus] = -θ[di.qrightKnee]
     θ[di.qbase_pitch] = prob.xᵨ[:com_target][7] 
+    θ[di.qbase_roll] = prob.xᵨ[:com_target][8] 
     com_pos =  kin.p_com_wrt_feet(θ) 
     Rz = RotZ(θ[di.qbase_yaw]) 
     com = [(Rz * com_pos[1:3])..., (Rz * com_pos[4:6])...]
@@ -559,8 +869,8 @@ end
 
 
 ## Fabric Components
-function walk_attractor_fabric(x, xdot, problem)
-    k = 1.0; β=3; λ = 1.0
+function walk_attractor_fabric(x, ẋ, problem)
+    k = 1.0; β=0.5; λ = 1.0
     N = length(x)
     W = problem.W[:walk_attractor]
     k = W*k  
@@ -568,7 +878,7 @@ function walk_attractor_fabric(x, xdot, problem)
     Δx = x - vc_goal
     ψ(θ) = 0.5*θ'*k*θ
     δx = FiniteDiff.finite_difference_gradient(ψ, Δx)
-    ẍ = -k*δx 
+    ẍ = -k*δx  
     M = λ * I(N)
     return (M, ẍ)
 end
@@ -577,7 +887,7 @@ function upper_body_posture_fabric(x, ẋ, prob::FabricProblem)
     λᵪ = 0.25; k = 4.0;  β=0.75
     M = λᵪ * I(length(x))
     W = prob.W[:upper_body_posture] 
-    k = W*k
+    k = W*k 
     Δx = x - prob.xᵨ[:upper_body_posture]
     ψ(θ) = 0.5*θ'*k*θ
     δx = FiniteDiff.finite_difference_gradient(ψ, Δx)
@@ -669,15 +979,27 @@ function mm_fabric_compute(q, qdot, qmotors, observation, problem)
     if problem.task_data[:mm][:standing]
         θd = q + θ̇d*1e-1
         q_out[problem.digit.leg_joint_indices] = θd[problem.digit.leg_joint_indices]
+        q_out[problem.digit.arm_joint_indices] = θd[problem.digit.arm_joint_indices] 
     else
         params = problem.task_data[:walk]
         indices = [params[:indices].idx_q_sw_hiproll_, params[:indices].idx_q_sw_hippitch_, params[:indices].idx_q_sw_knee_, params[:indices].idx_q_st_knee_]
         q_out[indices] = θd[indices]
-        qdot_out[indices] = qvel[indices]  + θ̇d[indices]
+        qdot_out[indices] = qvel[indices]+ θ̇d[indices]
+        q_out[problem.digit.arm_joint_indices] = q[problem.digit.arm_joint_indices] + θ̇d[problem.digit.arm_joint_indices]*1e-1
     end
-    q_out[problem.digit.arm_joint_indices] = θd[problem.digit.arm_joint_indices]
-    
+    qdot_out[problem.digit.arm_joint_indices] = θ̇d[problem.digit.arm_joint_indices] 
+
     q_out = clamp.(q_out, problem.digit.θ_min, problem.digit.θ_max)  
+    qdot_out = clamp.(qdot_out, problem.digit.θ̇_min, problem.digit.θ̇_max)
+
+    # q_out = filter_coordinates(q_out, problem, :pos)
+    # qdot_out = filter_coordinates(qdot_out, problem, :vel)
+    # qdot_out = zero(qdot_out)
+    # push!(problem.task_data[:diagnostics][:q], q_out[problem.digit.leg_joint_indices])
+    # push!(problem.task_data[:diagnostics][:qdot], qdot_out[problem.digit.leg_joint_indices])
+    # push!(problem.task_data[:diagnostics][:t], problem.t)
+    
+
     τ = zero(q_out) 
     return  q_out, qdot_out, τ
 end
